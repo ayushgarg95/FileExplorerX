@@ -65,9 +65,10 @@ class MenuExampleWindow(Gtk.Window):
         eventbox = Gtk.EventBox()
         eventbox.connect("button-press-event", self.on_button_press_event)
         box.pack_start(eventbox, True, True, 0)
-
-        label = Gtk.Label("Right-click to see the popup menu.")
-        eventbox.add(label)
+        
+        
+        but = Gtk.Button("tti")
+        eventbox.add(but)
 
         self.popup = uimanager.get_widget("/PopupMenu")
 
