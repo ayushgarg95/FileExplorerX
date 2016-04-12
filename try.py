@@ -1,5 +1,7 @@
 import gtk
 import os
+import shutil
+import errno
 
 #for running any linux command(Ayudh)
 import subprocess
@@ -11,6 +13,7 @@ COL_PIXBUF = 1
 COL_IS_DIRECTORY = 2
 back_stack = []
 forward_stack = []
+
 class PyApp(gtk.Window):
     def __init__(self):
         super(PyApp, self).__init__()
@@ -21,8 +24,9 @@ class PyApp(gtk.Window):
         self.connect("destroy", gtk.main_quit)
         self.set_title("ProjectX")
 
-        self.current_directory = '/'
-        
+        self.current_directory = '/home/ayush'
+        self.copy_dir = "/home"
+        self.paste_dir = "/home"
 
         vbox = gtk.VBox(False, 0);
 
@@ -92,24 +96,8 @@ class PyApp(gtk.Window):
         self.store = self.create_store()
         self.fill_store()
 
-        # Right Click Popup menu
-
-        rightClickMenu = gtk.Menu()
-        item1 = gtk.MenuItem("ITEM 1")
-        rightClickMenu.append(item1)
-
-        item2 = gtk.MenuItem("ITEM 2")
-        rightClickMenu.append(item2)
-        item1.show()
-        item2.show()
-
-        rightClickMenu.show()
+        #######
         eventbox = gtk.EventBox()
-        eventbox.connect_object("button-press-event", self.on_button_press_event,rightClickMenu)
-        
-        
-        # RIght Click ends
-
 
         iconView = gtk.IconView(self.store)
         iconView.set_selection_mode(gtk.SELECTION_MULTIPLE)
@@ -122,9 +110,43 @@ class PyApp(gtk.Window):
         iconView.set_text_column(COL_PATH)
         iconView.set_pixbuf_column(COL_PIXBUF)
 
-        iconView.connect("item-activated", self.on_item_activated)
+        iconView.connect("item-activated", self.on_item_activated)  #extra
+
+        iconView.connect("selection-changed", self.on_item_clicked)   #extra
         # extra 
         eventbox.add(iconView)
+
+        # Right Click Popup menu
+
+        rightClickMenu = gtk.Menu()
+
+        item1 = gtk.MenuItem("Open")
+        rightClickMenu.append(item1)
+        item1.connect("activate",self.on_open_clicked,"Open")
+
+        item2 = gtk.MenuItem("Copy")
+        rightClickMenu.append(item2)    
+        item2.connect("activate",self.on_copy,"Copy")
+
+        item3 = gtk.MenuItem("Paste")
+        rightClickMenu.append(item3)
+        item3.connect("activate",self.on_paste,"Paste")
+
+        
+        item1.show()
+        item2.show()
+        item3.show()
+
+        rightClickMenu.show()
+        
+        eventbox.connect_object("button-press-event", self.on_button_press_event,rightClickMenu)
+        #iconView.connect("button-press-event", self.on_button_press_event_iconView)
+        
+        
+        # RIght Click ends
+
+
+       
         sw.add_with_viewport(eventbox)
 
         # extra ends
@@ -186,12 +208,46 @@ class PyApp(gtk.Window):
         self.fill_store()
         self.upButton.set_sensitive(True)         
 #end here
+    
+
+    def on_item_clicked(self, widget):
+
+        mm = widget.get_cursor()
+        if not mm:
+            return
+        item = mm[0]
+
+        print "SELECTION CHANGED"
+        global model1 
+        model1 = widget.get_model()
+        
+        global path1 
+        path1 = model1[item][COL_PATH]
+        
+        global isDir1 
+        isDir1 = model1[item][COL_IS_DIRECTORY]
+
+    def on_open_clicked(self,widget,item):
+        if not isDir1:
+            subprocess.call(["xdg-open",self.current_directory +"/"+path1])  
+            return
+
+        back_stack.append(self.current_directory)
+        forward_stack[:]= []
+        self.forwardButton.set_sensitive(False)
+        self.backButton.set_sensitive(True)
+        self.current_directory = self.current_directory + os.path.sep + path1
+        self.fill_store()
+        self.upButton.set_sensitive(True)
+
 
     def on_item_activated(self, widget, item):
-
         model = widget.get_model()
+        #print model
         path = model[item][COL_PATH]
+        #print path
         isDir = model[item][COL_IS_DIRECTORY] 
+        #print isDir
 
         # opens a file withs its default preferred application(Ayudh)
         if not isDir:
@@ -216,16 +272,48 @@ class PyApp(gtk.Window):
         if self.current_directory == "/": sensitive = False
         self.upButton.set_sensitive(sensitive)
 
+    # Right Click Event
     def on_button_press_event(self, widget, event):
             # Check if right mouse button was preseed
             if event.type == gtk.gdk.BUTTON_PRESS and event.button == 3:
-                print "HI"
+                # iconView.connect("",self.on_item_clicked)   #extra
                 widget.popup(None, None, None, event.button, event.time)
                 widget.grab_focus()
                 return True # event has been handled
+            #ends
 
-PyApp()
+    # def on_button_press_event_iconView(self, widget, event):
+    #         # Check if right mouse button was preseed
+    #         if event.type == gtk.gdk.BUTTON_PRESS and event.button == 3:
+    #             print widget.get_cursor()
+    #             #rightClickMenu.popup(None, None, None, event.button, event.time)
+    #             #rightClickMenu.grab_focus()
+    #             return True # event has been handled
+    #         #ends
 
+    def copy(self, src, dest):
+        try:
+            shutil.copytree(src, dest)
+        except OSError as e:
+            # If the error was caused because the source wasn't a directory
+            if e.errno == errno.ENOTDIR:
+                shutil.copy(src, dest)
+            else:
+                print('Directory not copied. Error: %s' % e)
 
+    def on_copy(self,widget,event):
+        self.copy_dir = self.current_directory + os.path.sep + path1
+        global path2
+        path2 = path1
+        print path2
+        print self.copy_dir
+
+    def on_paste(self,widget,event):
+        self.paste_dir = self.current_directory + os.path.sep + path2
+        print self.copy_dir
+        print self.paste_dir
+        self.copy(self.copy_dir,self.paste_dir)
+        print "Copied"
+        self.fill_store()
 PyApp()
 gtk.main()
