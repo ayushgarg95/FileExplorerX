@@ -329,9 +329,13 @@ class PyApp(gtk.Window):
         
         item8 = gtk.MenuItem("Terminal")
         rightClickMenu.append(item8)
-
         item8.set_submenu(terminalMenu)
 
+        #Properties 
+        item9 = gtk.MenuItem("Properties")
+        rightClickMenu.append(item9)
+        item9.connect("activate",self.on_properties_clicked)
+        
         item1.show()
         item2.show()
         item3.show()
@@ -340,6 +344,7 @@ class PyApp(gtk.Window):
         item6.show()
         item7.show()
         item8.show()
+        item9.show()
 
         terminalMenu.show()
         rightClickMenu.show()
@@ -628,6 +633,9 @@ class PyApp(gtk.Window):
     def on_newfolder_clicked(self,widget):
         new_folder_path = self.current_directory + os.path.sep + "New_folder"
         os.mkdir(new_folder_path,0755)
+
+    def on_properties_clicked(self,widget):
+        print "Hello"
 
 PyApp()
 gtk.main()
