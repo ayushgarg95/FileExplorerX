@@ -9,6 +9,9 @@ import subprocess
 from subprocess import call
 #ends here
 
+new_name="New Folder" #global variable for new folder function
+file_to_be_renamed="/" #global variable for renaming a file
+
 #dialog box for about
 
 class about(gtk.Dialog):
@@ -18,21 +21,146 @@ class about(gtk.Dialog):
 
         self.set_default_size(150, 100)
 
+        label1=gtk.Label()
+        label1.set_markup("ProjectX lets you organize files and folders on your computer :)")
+        label1.set_line_wrap(True)
+
         label = gtk.Label()
-        #label.set_markup("Developed by Avneet Singh Saluja, Ayudh Kumar Gupta, Ayur Jain, Ayush Garg, Ayush Rohatgi")
-        label.set_line_wrap(True)
+        label.set_markup("  Developed by Avneet Singh Saluja, Ayudh Kumar Gupta, Ayur Jain, Ayush Garg, Ayush Rohatgi  ")
+        
+        label2=gtk.Label()
+        label2.set_markup("V 1.0")
+        label2.set_line_wrap(True)
 
         box = self.get_content_area()
+        box.add(label1)
+        box.add(label2) 
         box.add(label) 
+
+        self.ok_button=gtk.Button("OK")
+        box.add(self.ok_button)
+        self.ok_button.connect("clicked",self.closer)
+
         self.show_all()
 
+    def closer(self,widget):
+        self.destroy()
+
 #ends here
+
+
+#Properties Popup
+
+selected_path_for_prop="/"
+
+
+class prop(gtk.Dialog):
+
+    def __init__(self, parent):
+        gtk.Dialog.__init__(self, "Properties", parent, 0)
+
+        self.set_default_size(150, 100)
+
+        a=os.path.getsize(selected_path_for_prop)
+        a=str(a/1024000.00)
+        
+        b=os.path.basename(selected_path_for_prop)
+        
+        label1=gtk.Label()
+        label1.set_markup("  Name: "+b+"  ")
+        label1.set_line_wrap(True)
+
+        label2=gtk.Label()
+        label2.set_markup("  Size: "+a+"MB  ")
+        label2.set_line_wrap(True)
+
+        label3=gtk.Label()
+        label3.set_markup("  Directory: "+selected_path_for_prop+"  ")
+        label3.set_line_wrap(True)
+
+        box = self.get_content_area()
+        box.add(label1)
+        box.add(label2)
+        box.add(label3)
+        
+        self.ok_button=gtk.Button("OK")
+        box.add(self.ok_button)
+        self.ok_button.connect("clicked",self.closer)
+        
+        self.show_all()
+    def closer(self,widget):
+        self.destroy()
+
+
+#ends here
+
+#Enter Name popup
+class name(gtk.Dialog):
+
+    def __init__(self, parent):
+        gtk.Dialog.__init__(self, "Rename", parent, 0)
+
+        self.set_default_size(150, 100)
+        label1=gtk.Label()
+        label1.set_markup("Enter New Name")
+        
+        self.newname=gtk.Entry()
+        box = self.get_content_area()
+        box.add(label1)
+        box.add(self.newname)
+        
+        self.ok_button=gtk.Button("OK")
+        box.add(self.ok_button)
+        self.ok_button.connect("clicked",self.on_rename_ok_clicked)
+        self.show_all()
+                        
+
+    def on_rename_ok_clicked(self,widget):
+        temp=self.newname.get_text()
+        os.renames(selected_path_for_prop,file_to_be_renamed+"/"+temp)
+        self.destroy()
+
+
+#ends here
+
+#new folder name popup
+
+class newfoldername(gtk.Dialog):
+
+    def __init__(self, parent):
+        gtk.Dialog.__init__(self, "New Folder", parent, 0)
+        self.set_default_size(150, 100)
+        label1=gtk.Label()
+        label1.set_markup("Enter New Folder's Name")
+        
+        self.newname=gtk.Entry()
+        box = self.get_content_area()
+        box.add(label1)
+        box.add(self.newname)
+        
+        self.ok_button=gtk.Button("OK")
+        box.add(self.ok_button)
+        self.ok_button.connect("clicked",self.on_newfolder_ok_clicked)
+        self.show_all()               
+
+    def on_newfolder_ok_clicked(self,widget):
+        temp=self.newname.get_text()
+        global new_name
+        new_name=temp
+        self.destroy()
+
+#ends here
+
 
 COL_PATH = 0
 COL_PIXBUF = 1
 COL_IS_DIRECTORY = 2
 back_stack = []
 forward_stack = []
+selected_path = []
+selected_isDir = []
+selected_items = []
+path2 = [('a',0)]
 
 class PyApp(gtk.Window):
     def __init__(self):
@@ -46,22 +174,10 @@ class PyApp(gtk.Window):
         self.set_title("ProjectX")
         self.current_directory = '/'
         
-        self.copy_dir = "/home"
+        self.copy_dir = ["/home/ayush/Music"]
         self.paste_dir = "/home"
-        self.copy_dir = "/home/ayush/Downloads/B_large.in"
-        self.copyorcut = 0
         vbox = gtk.VBox(False, 0);       
         
-        # Dialog Box
-
-        dialog = gtk.MessageDialog(
-        parent         = None,
-        flags          = gtk.DIALOG_DESTROY_WITH_PARENT,
-        type           = gtk.MESSAGE_INFO,
-        buttons        = gtk.BUTTONS_OK,
-        message_format = "Developed by Avneet Singh Saluja, Ayudh Kumar Gupta, Ayur Jain, Ayush Garg, Ayush Rohatgi")
-        dialog.set_title('About ProjectX')
-        dialog.connect('response', lambda dialog, response: dialog.destroy())
 
         #MenuBar declarations
         
@@ -88,17 +204,21 @@ class PyApp(gtk.Window):
         edit_cut=gtk.MenuItem("Cut")
         edit_copy=gtk.MenuItem("Copy")
         edit_paste=gtk.MenuItem("Paste")
+        edit_rename=gtk.MenuItem("Rename")
         edit_delete=gtk.MenuItem("Delete")
+
         edit_menu_dropdown.set_submenu(edit_menu)
         edit_menu.append(edit_cut)
         edit_menu.append(edit_copy)
         edit_menu.append(edit_paste)
+        edit_menu.append(edit_rename)
         edit_menu.append(edit_delete)
         main_menu_bar.append(edit_menu_dropdown)
                 
         edit_cut.connect("activate",self.on_cut,"Cut")
         edit_copy.connect("activate",self.on_copy,"Copy")
         edit_paste.connect("activate",self.on_paste,"Paste")
+        edit_rename.connect("activate",self.on_rename_clicked,"Rename")
         edit_delete.connect("activate",self.on_delete,"Delete")
 
 
@@ -121,8 +241,8 @@ class PyApp(gtk.Window):
         help_menu.append(help_about)
         main_menu_bar.append(help_menu_dropdown)
 
-        #help_about.connect("activate",self.on_about_clickedtp)
-        help_about.connect("activate", lambda *args: dialog.show())
+        help_about.connect("activate",self.on_about_clicked)
+        
     
         #ends here
 
@@ -230,7 +350,7 @@ class PyApp(gtk.Window):
         toolbar.insert(sep, 4)
 
         self.searchfile=gtk.Entry()
-        self.searchfile.set_text("Search")
+        self.searchfile.set_text("")
         item = gtk.ToolItem()
         item.add(self.searchfile)
         toolbar.insert(item, -1)
@@ -336,6 +456,12 @@ class PyApp(gtk.Window):
         rightClickMenu.append(item9)
         item9.connect("activate",self.on_properties_clicked)
         
+        item10 = gtk.MenuItem("Rename")
+        rightClickMenu.append(item10)
+        item10.connect("activate",self.on_rename_clicked)
+
+       
+
         item1.show()
         item2.show()
         item3.show()
@@ -345,6 +471,7 @@ class PyApp(gtk.Window):
         item7.show()
         item8.show()
         item9.show()
+        item10.show()
 
         terminalMenu.show()
         rightClickMenu.show()
@@ -431,29 +558,28 @@ class PyApp(gtk.Window):
         mm = widget.get_cursor()
         if not mm:
             return
-        item = mm[0]
+        
+        selected_items = widget.get_selected_items()
 
-        global model1 
-        model1 = widget.get_model()
-        
-        global path1 
-        path1 = model1[item][COL_PATH]
-        
-        global isDir1 
-        isDir1 = model1[item][COL_IS_DIRECTORY]
+        global model1
 
-        
+        del selected_path[:]
+        del selected_isDir[:]
+        for item in selected_items:
+            model1 = widget.get_model()
+            selected_path.append(model1[item][COL_PATH])
+            selected_isDir.append(model1[item][COL_IS_DIRECTORY])        
 
     def on_open_clicked(self,widget,item):
-        if not isDir1:
-            subprocess.call(["xdg-open",self.current_directory +"/"+path1])  
+        if not selected_isDir[0]:
+            subprocess.call(["xdg-open",self.current_directory +"/"+selected_path[0]])  
             return
 
         back_stack.append(self.current_directory)
         forward_stack[:]= []
         self.forwardButton.set_sensitive(False)
         self.backButton.set_sensitive(True)
-        self.current_directory = self.current_directory + os.path.sep + path1
+        self.current_directory = self.current_directory + os.path.sep + selected_path[0]
         self.fill_store()
         self.upButton.set_sensitive(True)
 
@@ -480,6 +606,7 @@ class PyApp(gtk.Window):
         self.current_directory = self.current_directory + os.path.sep + path
         self.fill_store()
         self.upButton.set_sensitive(True)
+
         #ends
     
     #up button function
@@ -504,14 +631,6 @@ class PyApp(gtk.Window):
                 return True # event has been handled
             #ends
 
-    # def on_button_press_event_iconView(self, widget, event):
-    #         # Check if right mouse button was preseed
-    #         if event.type == gtk.gdk.BUTTON_PRESS and event.button == 3:
-    #             print widget.get_cursor()
-    #             #rightClickMenu.popup(None, None, None, event.button, event.time)
-    #             #rightClickMenu.grab_focus()
-    #             return True # event has been handled
-    #         #ends
 
     def copy(self, src, dest):
         try:
@@ -524,31 +643,31 @@ class PyApp(gtk.Window):
                 print('Directory not copied. Error: %s' % e)
 
     def on_copy(self,widget,event):
-        self.copy_dir = self.current_directory + os.path.sep + path1
-        self.copyorcut = 0
-        global path2
-        path2 = path1
+        del path2[:]
+        del self.copy_dir[:]
+        for path1 in selected_path:
+            self.copy_dir.append(self.current_directory + os.path.sep + path1)
+            path2.append((path1,0))
         print path2
-        print self.copy_dir
 
     def on_cut(self,widget,event):
-        self.copy_dir = self.current_directory + os.path.sep + path1
-        self.copyorcut = 1
-        global path2
-        path2 = path1
+        del path2[:]
+        del self.copy_dir[:]
+        for path1 in selected_path:
+            self.copy_dir.append(self.current_directory + os.path.sep + path1)
+            path2.append((path1,1))
         print path2
-        print self.copy_dir
 
 
     def on_paste(self,widget,event):
-        self.paste_dir = self.current_directory + os.path.sep + path2
-        print self.copy_dir
-        print self.paste_dir
-        if self.copyorcut == 0:
-            self.copy(self.copy_dir,self.paste_dir)
-            print "Copied"
-        else:
-            shutil.move(self.copy_dir,self.paste_dir)
+        for i in range(len(path2)):
+            self.paste_dir = self.current_directory + os.path.sep + path2[i][0]
+            if path2[i][1] == 0:
+                self.copy(self.copy_dir[i],self.paste_dir)
+                print "copied"
+            else:
+                shutil.move(self.copy_dir[i],self.paste_dir)        
+                print "pasted"
         self.fill_store()
 
     def delete(self, path):
@@ -562,9 +681,11 @@ class PyApp(gtk.Window):
                 print('Directory not copied. Error: %s' % e)
 
     def on_delete(self, widget, event):
-        self.delpath = self.current_directory + os.path.sep + path1
-        self.delete(self.delpath)
-        print self.delpath, "- deleted"
+        for x in selected_path:
+            self.delpath = self.current_directory + os.path.sep + x
+            self.delete(self.delpath)
+            print self.delpath, "- deleted"
+        
         self.fill_store()
 
     #Bookmarks bar functions
@@ -606,9 +727,42 @@ class PyApp(gtk.Window):
     #search function
     
     def searchfunc(self,widget):
-        search_query=self.searchfile.get_text()
-        print search_query
-    
+        fileName = self.searchfile.get_text()
+        paths = "\n"
+        for root, dirs, files in os.walk('/home', topdown=False):
+            for name in files:
+                if name == fileName:
+                    paths += "  " + str(os.path.join(root, name))  + "  \n\n"
+            for name in dirs:
+                if name == fileName:
+                    paths += "  " + str(os.path.join(root, name)) + "  \n\n"
+        paths = paths[:-1]
+        if len(paths) > 0 :
+            self.popup = gtk.Window()
+            self.popup.set_title( "Paths" )
+            vbox = gtk.VBox(False,0)
+            hbox = gtk.HBox(False)
+            label = gtk.Label(paths)
+            label.set_line_wrap( True )
+            label.connect( "size-allocate",self.size_allocate)
+            vbox.pack_start(gtk.Label(paths),True,False,0)
+            closeButton = gtk.Button(" Close ")
+            closeButton.set_sensitive(True)
+            closeButton.connect("clicked",self.on_destroy)
+            hbox.pack_start(closeButton,True,False,0)
+            vbox.pack_start(hbox,True,False,10)
+            self.popup.add(vbox)
+            self.popup.set_type_hint( gtk.gdk.WINDOW_TYPE_HINT_DIALOG)
+            self.popup.show_all()
+
+    def size_allocate(self,label,allocation):
+        label.set_size_request(allocation.width - 2,-1)
+
+    def on_destroy(self,popup):
+        if not self.popup.emit("delete-event", gtk.gdk.Event(gtk.gdk.DELETE)):
+            self.popup.destroy()
+            self.searchfile.set_text("")
+            
     #ends here
 
     #terminal menu commands
@@ -626,16 +780,38 @@ class PyApp(gtk.Window):
 
     #about dialog box func
 
-    #def on_about_clicked(self, widget):
-        #dialog = about(self)
+    def on_about_clicked(self, widget):
+        dialog = about(self)
      
     #ends here
-    def on_newfolder_clicked(self,widget):
-        new_folder_path = self.current_directory + os.path.sep + "New_folder"
-        os.mkdir(new_folder_path,0755)
 
-    def on_properties_clicked(self,widget):
-        print "Hello"
+    def on_newfolder_clicked(self,widget):
+        dialog = newfoldername(self) 
+        gtk.Dialog.run(dialog)
+        new_folder_path = self.current_directory + os.path.sep + new_name
+        print new_folder_path
+        os.mkdir(new_folder_path,0755)
+        self.fill_store()
+        
+
+    def on_properties_clicked(self,widget):   
+        #subprocess.call(["stat",self.current_directory +"/"+path1])
+        global selected_path_for_prop
+        selected_path_for_prop=self.current_directory +"/"+ selected_path[0]
+        dialog = prop(self)
+
+        
+    def on_rename_clicked(self, widget):
+        global file_to_be_renamed
+        file_to_be_renamed=self.current_directory 
+        global selected_path_for_prop
+        selected_path_for_prop=self.current_directory +"/"+ selected_path[0]
+        dialog = name(self)  
+        gtk.Dialog.run(dialog)
+        self.fill_store() 
+        
+             
+
 
 PyApp()
 gtk.main()
